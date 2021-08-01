@@ -1,8 +1,8 @@
 ﻿#include <Windows.h>
-#include "NewSection.h"
 #include <iostream>
 #include <string>
-
+#include "NewSection.h"
+#include "Crypto.h"
 
 
 void printBanner() {
@@ -33,7 +33,21 @@ void printHelp(const char *exeName) {
 int main(int argc, char *argv[]) {
 	printBanner();
 	if (argc != 3) {
+		/*
+		DEBUG for Crypto
+		
+		unsigned char dataBuffer[17] = { '1','2','3','4','5','6','7','8','9','a','b','c','d','e','f','g','h'};
+		size_t originalDataLength = 17;
+		unsigned char keyBuffer[KEYSIZE] = { 0x00 };
+		unsigned char IVBuffer[16] = { 0x00 };
+		unsigned char* newBuffer = paddingForInput(dataBuffer, originalDataLength);
+		size_t dataLength = (originalDataLength / 16 + 1) * 16;
+		encryptData(newBuffer, dataLength, keyBuffer, IVBuffer);
+		std::cout << "Data Buffer Encrypted ! " << std::endl;
+		decryptData(newBuffer, dataLength, keyBuffer, IVBuffer);
+		printf("%17s\n", newBuffer);
 		printHelp(argv[0]);
+		*/
 		return 0;
 	}
 	size_t fileSize = 0;
