@@ -17,10 +17,11 @@ char* readBinary(char* fileName,size_t *givenFileSize) {
 	char* binaryContent = NULL;
 	size_t fileSize = 0;
 	if (fileHandler) {
+		//Move cursor to the end of executable
 		fseek(fileHandler, 0, SEEK_END);
 		fileSize = ftell(fileHandler);
-		//printf("%d\n", fileSize);
 		binaryContent = new char[fileSize+1];
+		//Move cursor to the beginning
 		fseek(fileHandler, 0, SEEK_SET);
 		fread(binaryContent, sizeof(char), fileSize, fileHandler);
 		fclose(fileHandler);
@@ -28,23 +29,6 @@ char* readBinary(char* fileName,size_t *givenFileSize) {
 	*givenFileSize = fileSize;
 	return binaryContent;
 }
-
-/*
-		BYTE    Name[IMAGE_SIZEOF_SHORT_NAME]; Done
-	union { Not used
-			DWORD   PhysicalAddress;
-			DWORD   VirtualSize;
-	} Misc;
-	DWORD   VirtualAddress; Done
-	DWORD   SizeOfRawData; Done
-	DWORD   PointerToRawData; Done
-	DWORD   PointerToRelocations;
-	DWORD   PointerToLinenumbers;
-	WORD    NumberOfRelocations;
-	WORD    NumberOfLinenumbers;
-	DWORD   Characteristics; Done
-	PointerToRelocations, PointerToLinenumbers, NumberOfRelocations, NumberOfLinenumbers. None of these fi elds are used in the PE file format.
-	*/
 
 void saveNewPE(char* newFile, size_t lengthOfFile, const char* fileName) {
 	ntHeaders(newFile)->OptionalHeader.SizeOfImage =
@@ -61,33 +45,37 @@ char * createNewSectionHeader(char* imageBase,size_t stubSize,size_t *newFileSiz
 	IMAGE_NT_HEADERS* ntHeaderOfImage = ntHeaders(imageBase);
 	IMAGE_SECTION_HEADER* sectionHeaderArray = sectionHeaderArrays(imageBase);
 	int numberOfSections = ntHeaderOfImage->FileHeader.NumberOfSections;
-	//Area after the last section
+	//Area after the last section in disk
 	size_t newSectionOffset = sectionHeaderArray[numberOfSections - 1].PointerToRawData + sectionHeaderArray[numberOfSections - 1].SizeOfRawData;
 	//Area after the last element in the section header array
 	IMAGE_SECTION_HEADER* newSectionHeader = &sectionHeaderArray[numberOfSections];
 	
-	//check the section header boundary with the first section --> Does new header (get offset) overwrite the first section?
-	bool checkBoundary = ((char *) newSectionHeader - imageBase) < sectionHeaderArray[0].PointerToRawData;
+	//check the section header boundary with the first section --> Does new section header (get offset) overwrite the first section (.text section)?
+	bool checkBoundary = ((char *) newSectionHeader + sizeof(IMAGE_SECTION_HEADER) - imageBase) < sectionHeaderArray[0].PointerToRawData;
 	if (checkBoundary) {
 		//We are safe
 		memcpy(newSectionHeader->Name, ".huan", IMAGE_SIZEOF_SHORT_NAME);
-		//For memory
+		//In memory, sections should be multiple of page size, this alignment variable arranges this alignment.
 		newSectionHeader->VirtualAddress = P2ALIGNUP(
 			sectionHeaderArray[numberOfSections - 1].VirtualAddress + sectionHeaderArray[numberOfSections - 1].Misc.VirtualSize,
 			ntHeaderOfImage->OptionalHeader.SectionAlignment
 		);
-		//File alignment for PE File
+		//File alignment for PE File, same alignment problem but this is for disk
 		newSectionHeader->SizeOfRawData = P2ALIGNUP(stubSize, ntHeaderOfImage->OptionalHeader.FileAlignment);
 		//Section alignment for memory
 		newSectionHeader->Misc.VirtualSize = P2ALIGNUP((stubSize), ntHeaderOfImage->OptionalHeader.SectionAlignment);
 		newSectionHeader->Characteristics = IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE;
+		//Offset for file
 		newSectionHeader->PointerToRawData = newSectionOffset;
 		// Section Alignment trick and put correct address wrt last section
 		ntHeaderOfImage->FileHeader.NumberOfSections += 1;
+		//Now it has new section size
 		*newFileSize = P2ALIGNUP(stubSize, ntHeaderOfImage->OptionalHeader.FileAlignment);
+		//New Section Offset is actually end of the file
 		char* newExeBuffer = new char[newSectionOffset + *newFileSize];
 		memcpy(newExeBuffer, imageBase, newSectionOffset);
-		memset(newExeBuffer + newSectionOffset, 0x90, stubSize);
+		//New Section contains null bytes
+		memset(newExeBuffer + newSectionOffset, 0x00, stubSize);
 		*newFileSize += newSectionOffset;
 		return newExeBuffer;
 	}

@@ -39,13 +39,13 @@ int main(int argc, char *argv[]) {
 	size_t fileSize = 0;
 	char* binaryContent = readBinary(argv[1],&fileSize);
 	if (binaryContent == NULL || fileSize == 0) {
-		std::cout << std::endl << "[+] Error on reading the exe file !" << std::endl << std::endl;
+		std::cout << std::endl << "[!] Error on reading the exe file !" << std::endl << std::endl;
 		return 0;
 	}
 	size_t newFileSize = 0;
 	char* newBinary = createNewSectionHeader(binaryContent, 100,&newFileSize);
 	if (newBinary == NULL) {
-		std::cout << std::endl << "[+] Error on adding a new section header !" << std::endl << std::endl;
+		std::cout << std::endl << "[!] Error on adding a new section header !" << std::endl << std::endl;
 	}
 	//memcpy(newBinary, binaryContent, fileSize);
 	//memset(newBinary + fileSize, 0x90, 0x200);
