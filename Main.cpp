@@ -46,8 +46,8 @@ int main(int argc, char *argv[]) {
 		std::cout << "Data Buffer Encrypted ! " << std::endl;
 		decryptData(newBuffer, dataLength, keyBuffer, IVBuffer);
 		printf("%17s\n", newBuffer);
-		printHelp(argv[0]);
 		*/
+		printHelp(argv[0]);
 		return 0;
 	}
 	size_t fileSize = 0;

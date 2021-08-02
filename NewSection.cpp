@@ -80,6 +80,7 @@ char * createNewSectionHeader(char* imageBase,size_t stubSize,size_t *newFileSiz
 		return newExeBuffer;
 	}
 	else {
+		std::cout << "[!] Section Header Problem" << std::endl;
 		//TODO: Is there a way to fix this boundary problem?
 		return NULL;
 	}
