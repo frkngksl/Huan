@@ -139,7 +139,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\aes.c" />
+    <ClCompile Include="..\Crypto.cpp" />
     <ClCompile Include="Loader.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\aes.h" />
+    <ClInclude Include="..\aes.hpp" />
+    <ClInclude Include="..\Crypto.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

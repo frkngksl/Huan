@@ -2,7 +2,6 @@
 #include <iostream>
 #include <string>
 #include "NewSection.h"
-#include "Crypto.h"
 
 
 void printBanner() {
@@ -33,31 +32,19 @@ void printHelp(const char *exeName) {
 int main(int argc, char *argv[]) {
 	printBanner();
 	if (argc != 3) {
-		/*
-		DEBUG for Crypto
-		
-		unsigned char dataBuffer[17] = { '1','2','3','4','5','6','7','8','9','a','b','c','d','e','f','g','h'};
-		size_t originalDataLength = 17;
-		unsigned char keyBuffer[KEYSIZE] = { 0x00 };
-		unsigned char IVBuffer[16] = { 0x00 };
-		unsigned char* newBuffer = paddingForInput(dataBuffer, originalDataLength);
-		size_t dataLength = (originalDataLength / 16 + 1) * 16;
-		encryptData(newBuffer, dataLength, keyBuffer, IVBuffer);
-		std::cout << "Data Buffer Encrypted ! " << std::endl;
-		decryptData(newBuffer, dataLength, keyBuffer, IVBuffer);
-		printf("%17s\n", newBuffer);
-		*/
 		printHelp(argv[0]);
 		return 0;
 	}
-	size_t fileSize = 0;
-	char* binaryContent = readBinary(argv[1],&fileSize);
+	size_t fileSize = 0;	
+	char* binaryContent = readBinary(argv[1], &fileSize);
 	if (binaryContent == NULL || fileSize == 0) {
 		std::cout << std::endl << "[!] Error on reading the exe file !" << std::endl << std::endl;
 		return 0;
 	}
 	size_t newFileSize = 0;
-	char* newBinary = createNewSectionHeader(binaryContent, 100,&newFileSize);
+	unsigned char packedContent[17] = { '1','2','3','4','5','6','7','8','9','a','b','c','d','e','f','g','h' };
+	size_t packedLength = 17;
+	char* newBinary = createNewSectionHeader(binaryContent,packedContent, packedLength,&newFileSize);
 	if (newBinary == NULL) {
 		std::cout << std::endl << "[!] Error on adding a new section header !" << std::endl << std::endl;
 	}
