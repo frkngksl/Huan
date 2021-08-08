@@ -9,6 +9,11 @@
 //Section headers are located sequentially right after the optional header in the PE file format. Each section header is 40 bytes with no padding between them. Section headers are defined as in the following structure
 #define sectionHeaderArrays(imageBase) ((IMAGE_SECTION_HEADER *)((size_t)ntHeaders(imageBase) + sizeof(IMAGE_NT_HEADERS)))
 
+typedef struct _BASE_RELOCATION_ENTRY {
+	WORD Offset : 12;
+	WORD Type : 4;
+} BASE_RELOCATION_ENTRY;
+
 char* readBinary(const char* fileName, size_t* givenFileSize) {
 	FILE* fileHandler = fopen(fileName, "rb+");
 	char* binaryContent = NULL;
@@ -78,7 +83,7 @@ void fixImportAddressTable(BYTE* baseAddress) {
 	IMAGE_NT_HEADERS* ntHeader = ntHeaders(baseAddress);
 	IMAGE_DATA_DIRECTORY* iatDirectory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
 	if (iatDirectory->VirtualAddress == NULL) {
-		std::cout << "[!] Import Address Table not found" << std::endl;
+		std::cout << "[!] Import Table not found" << std::endl;
 	}
 	else {
 		/*
@@ -153,18 +158,79 @@ FirstThunk is another important member which point to IAT. in the previous step 
 			size_t firstThunkRVA = ITEntryCursor->FirstThunk;
 			//Name
 			size_t originalFirstThunkRVA = ITEntryCursor->OriginalFirstThunk;
-			if (originalFirstThunkRVA == NULL) originalFirstThunkRVA = ITEntryCursor->FirstThunk;
-			size_t offsetFirstThunk = 0;
-			size_t offsetOriginalFirstThunk = 0;
+			if (originalFirstThunkRVA == NULL) {
+				originalFirstThunkRVA = ITEntryCursor->FirstThunk;
+			}
+			size_t cursorFirstThunk = 0;
+			size_t cursorOriginalFirstThunk = 0;
 			while (true){
 				//The WINNT.H file provides the IMAGE_SNAP_BY_ORDINAL macro to determine whether it's an import by ordinal. It also provides the IMAGE_ORDINAL macro to get the ordinal from the 32 - bit number in the ILT.The ILT is a variable - sized array.
 				// The end of the ILT is marked with a 0.
-				IMAGE_THUNK_DATA* firstThunkData = (IMAGE_THUNK_DATA*)(baseAddress + offsetFirstThunk + firstThunkRVA);
-				IMAGE_THUNK_DATA* originalFirstThunkData = (IMAGE_THUNK_DATA*)(baseAddress + offsetOriginalFirstThunk + originalFirstThunkRVA);
-				break;
-
+				IMAGE_THUNK_DATA* firstThunkData = (IMAGE_THUNK_DATA*)(baseAddress + cursorFirstThunk + firstThunkRVA);
+				IMAGE_THUNK_DATA* originalFirstThunkData = (IMAGE_THUNK_DATA*)(baseAddress + cursorOriginalFirstThunk + originalFirstThunkRVA);
+				if (firstThunkData->u1.Function == NULL) {
+					//end of the list
+					break;
+				}
+				else if (IMAGE_SNAP_BY_ORDINAL64(originalFirstThunkData->u1.Ordinal)) {
+					unsigned int printOrdinal = originalFirstThunkData->u1.Ordinal & 0xFFFF;
+					size_t functionAddr = (size_t) GetProcAddress(LoadLibraryA(dllName), (char*)(originalFirstThunkData->u1.Ordinal & 0xFFFF));
+					std::cout << "\r[+] Import by ordinal: " << printOrdinal << std::endl;
+					firstThunkData->u1.Function = (ULONGLONG) functionAddr;
+				}
+				else {
+					PIMAGE_IMPORT_BY_NAME nameOfFunc = (PIMAGE_IMPORT_BY_NAME)(size_t(baseAddress) + originalFirstThunkData->u1.AddressOfData);
+					size_t functionAddr = (size_t)GetProcAddress(LoadLibraryA(dllName), nameOfFunc->Name);
+					std::cout << "\r[+] Import by name: " << nameOfFunc->Name << std::endl;
+					firstThunkData->u1.Function = (ULONGLONG)functionAddr;
+				}
+				cursorFirstThunk += sizeof(IMAGE_THUNK_DATA);
+				cursorOriginalFirstThunk += sizeof(IMAGE_THUNK_DATA);
 			}
 		}
+	}
+}
+
+void fixRelocTable(BYTE* loadedAddr, BYTE* preferableAddr, IMAGE_DATA_DIRECTORY* relocDir) {
+	//for each block
+	//The relocation table contains many packages to relocate the information related to the virtual address inside the virtual memory
+	//image. Each package comprise of a 8 bytes header to exhibit the base virtual address and the number of data, demonstrated by the IMAGE_BASE_RELOCATION data structure.
+	/*
+	The VirtualAddress holds a Relative Virtual Address (RVA) of the 4 KB page, which the relocation applies to. The SizeOfBlock holds the size of the block 
+	in bytes (including the size of the IMAGE_BASE_RELOCATION struct).
+	The .reloc section contains a serie of blocks. There is one block for each 4 KB page that contains virtual addresses, which is in need for fix ups. Each block contains an 
+	IMAGE_BASE_RELOCATION struct and a serie of entries.
+	--> Directory contains blocks
+	--> each block has a metadata as first few bytes
+	--> This metadata contains page address (which fix will be applied) and size of block
+
+	*/
+	size_t maxSizeOfDir = relocDir->Size;
+	size_t relocBlocks = relocDir->VirtualAddress;
+	IMAGE_BASE_RELOCATION* relocBlockMetadata = NULL;
+
+	size_t relocBlockOffset = 0;
+	for (; relocBlockOffset < maxSizeOfDir; relocBlockOffset += relocBlockMetadata->SizeOfBlock) {
+		relocBlockMetadata = (IMAGE_BASE_RELOCATION*)(relocBlocks + relocBlockOffset + loadedAddr);
+		if (relocBlockMetadata->VirtualAddress == NULL || relocBlockMetadata->SizeOfBlock == 0) {
+			//No more block
+			break;
+		}
+		size_t entriesNum = (relocBlockMetadata->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(BASE_RELOCATION_ENTRY);
+		size_t pageStart = relocBlockMetadata->VirtualAddress;
+		BASE_RELOCATION_ENTRY* relocEntryCursor = (BASE_RELOCATION_ENTRY*)((BYTE*)relocBlockMetadata + sizeof(IMAGE_BASE_RELOCATION));
+		for (int i = 0; i < entriesNum; i++) {
+			if (relocEntryCursor->Type == 0) {
+				continue;
+			}
+			DWORD* relocationAddr = (DWORD *) (pageStart + loadedAddr+relocEntryCursor->Offset);
+			*relocationAddr = *relocationAddr + loadedAddr - preferableAddr;
+			relocEntryCursor = (BASE_RELOCATION_ENTRY*)((BYTE*)relocEntryCursor + sizeof(BASE_RELOCATION_ENTRY));
+		}
+	}
+	if (relocBlockOffset == 0) {
+		//Nothing happened
+		std::cout << "[!] There is a problem in relocation directory" << std::endl;
 	}
 }
 
@@ -198,6 +264,19 @@ void peLoader(unsigned char* baseAddr) {
 	}
 	std::cout << "[+] All sections are copied" << std::endl;
 	fixImportAddressTable(imageBaseForPE);
+	if (((ULONGLONG)imageBaseForPE) != preferableAddress) {
+		if (relocTable) {
+			fixRelocTable(imageBaseForPE, (BYTE*)preferableAddress, relocTable);
+		}
+		else {
+			std::cout << "[!] No Reloc Table Found" << std::endl;
+		}
+		
+	}
+	size_t startAddress = (size_t)(imageBaseForPE)+ntHeader->OptionalHeader.AddressOfEntryPoint;
+	std::cout << "[+] Binary is running" << std::endl;
+
+	((void(*)())startAddress)();
 }
 
 int main() {
