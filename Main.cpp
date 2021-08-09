@@ -29,7 +29,26 @@ void printHelp(const char *exeName) {
 	std::cout << "[+] Usage: " << exeName << " <exe path> <new exe name>" << std::endl << std::endl;
 }
 
+bool compileLoader() {
+	const char* vsWhere = "\"\"C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe\" -latest -products * -requires Microsoft.Component.MSBuild -property installationPath\"";
+	FILE* pipe = _popen(vsWhere, "rt");
+	if (pipe != NULL) {
+		char compilerPath[MAX_PATH] = { 0 };
+		char solutionDir[MAX_PATH] = { 0 };
+		if (fgets(compilerPath, MAX_PATH, pipe) != NULL) {
+			std::cout << "Compiler Path: " << compilerPath << std::endl;
+			std::cout << "Solution Path: " << SOLUTIONDIR << std::endl;
+		}
+		else {
+			std::cout << "[!] Visual Studio compiler path is not found! " << std::endl;
+			return false;
+		}
+		_pclose(pipe);
+	}
+}
+
 int main(int argc, char *argv[]) {
+	compileLoader();
 	printBanner();
 	if (argc != 3) {
 		printHelp(argv[0]);

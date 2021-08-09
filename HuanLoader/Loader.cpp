@@ -79,7 +79,7 @@ void fixImportAddressTable(BYTE* baseAddress) {
 	For example, in case of an .exe file, an IAT stores the addresses of particular library functions imported from DLLs. That explains the name of this table.
 	Generally speaking, a call table is nothing more than an array where each element contains the address of a certain routine.
 	*/
-	std::cout << "[+] IAT Fix starts...";
+	std::cout << "[+] IAT Fix starts..." << std::endl;
 	IMAGE_NT_HEADERS* ntHeader = ntHeaders(baseAddress);
 	IMAGE_DATA_DIRECTORY* iatDirectory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
 	if (iatDirectory->VirtualAddress == NULL) {
@@ -175,13 +175,13 @@ FirstThunk is another important member which point to IAT. in the previous step 
 				else if (IMAGE_SNAP_BY_ORDINAL64(originalFirstThunkData->u1.Ordinal)) {
 					unsigned int printOrdinal = originalFirstThunkData->u1.Ordinal & 0xFFFF;
 					size_t functionAddr = (size_t) GetProcAddress(LoadLibraryA(dllName), (char*)(originalFirstThunkData->u1.Ordinal & 0xFFFF));
-					std::cout << "\r[+] Import by ordinal: " << printOrdinal << std::endl;
+					std::cout << "     [+] Import by ordinal: " << printOrdinal << std::endl;
 					firstThunkData->u1.Function = (ULONGLONG) functionAddr;
 				}
 				else {
 					PIMAGE_IMPORT_BY_NAME nameOfFunc = (PIMAGE_IMPORT_BY_NAME)(size_t(baseAddress) + originalFirstThunkData->u1.AddressOfData);
 					size_t functionAddr = (size_t)GetProcAddress(LoadLibraryA(dllName), nameOfFunc->Name);
-					std::cout << "\r[+] Import by name: " << nameOfFunc->Name << std::endl;
+					std::cout << "     [+] Import by name: " << nameOfFunc->Name << std::endl;
 					firstThunkData->u1.Function = (ULONGLONG)functionAddr;
 				}
 				cursorFirstThunk += sizeof(IMAGE_THUNK_DATA);
