@@ -29,23 +29,74 @@ void printHelp(const char *exeName) {
 	std::cout << "[+] Usage: " << exeName << " <exe path> <new exe name>" << std::endl << std::endl;
 }
 
+bool DeleteDirectory(char *strPath)
+{
+	SHFILEOPSTRUCTA strOper = { 0 };
+	strOper.hwnd = NULL;
+	strOper.wFunc = FO_DELETE;
+	strOper.pFrom = strPath;
+	strOper.fFlags = FOF_SILENT | FOF_NOCONFIRMATION;
+
+	if (0 == SHFileOperationA(&strOper)){
+		std::cout << "[!] Unicode directory deletion problem" << std::endl;
+	}
+}
+
+bool directoryExists(const std::string& dirName)
+{
+	DWORD fileType = GetFileAttributesA(dirName.c_str());
+	if (fileType == INVALID_FILE_ATTRIBUTES) {
+		return false;
+	}
+	if (fileType & FILE_ATTRIBUTE_DIRECTORY) {
+		return true;
+	}
+	return false;
+}
+
+void clearDirectory() {
+	char removedDir1[MAX_PATH] = { 0 };
+	char removedDir2[MAX_PATH] = { 0 };
+	sprintf(removedDir1, "%sx64\\JustLoader\\", SOLUTIONDIR);
+	sprintf(removedDir2, "%sHuanLoader\\x64\\", SOLUTIONDIR);
+	//std::cout << removedDir1 << " " << directoryExists(removedDir1) << std::endl;
+	//std::cout << removedDir2 << " " << directoryExists(removedDir2) << std::endl;
+	if (directoryExists(removedDir1)) {
+		std::cout << "[+] Cleaning " << removedDir1 << std::endl;
+		DeleteDirectory(removedDir1);
+	}
+	if (directoryExists(removedDir2)) {
+		std::cout << "[+] Cleaning " << removedDir2 << std::endl;
+		DeleteDirectory(removedDir2);
+	}
+}
+
 bool compileLoader() {
+	clearDirectory();
 	const char* vsWhere = "\"\"C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe\" -latest -products * -requires Microsoft.Component.MSBuild -property installationPath\"";
 	FILE* pipe = _popen(vsWhere, "rt");
 	if (pipe != NULL) {
 		char compilerPath[MAX_PATH] = { 0 };
-		char solutionDir[MAX_PATH] = { 0 };
+		char fullCommand[MAX_PATH] = { 0 };
 		if (fgets(compilerPath, MAX_PATH, pipe) != NULL) {
+			//Remove new line
+			compilerPath[strlen(compilerPath) - 1] = '\0';
 			std::cout << "Compiler Path: " << compilerPath << std::endl;
 			std::cout << "Solution Path: " << SOLUTIONDIR << std::endl;
+			sprintf(fullCommand, "\"\"%s\\MSBuild\\Current\\Bin\\MSBuild.exe\" %s\\Huan.sln /t:HuanLoader /property:Configuration=JustLoader /property:RuntimeLibrary=MT\"\n", compilerPath, SOLUTIONDIR);
+			FILE* pipe2 = _popen(fullCommand, "rt");
+			_pclose(pipe2);
 		}
 		else {
 			std::cout << "[!] Visual Studio compiler path is not found! " << std::endl;
 			return false;
 		}
 		_pclose(pipe);
+		return true;
 	}
 }
+
+
 
 int main(int argc, char *argv[]) {
 	compileLoader();
