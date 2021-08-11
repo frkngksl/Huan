@@ -31,15 +31,23 @@ char* readBinary(char* fileName,size_t *givenFileSize) {
 	return binaryContent;
 }
 
-void saveNewPE(char* newFile, size_t lengthOfFile, const char* fileName) {
+bool saveNewPE(char* newFile, size_t lengthOfFile, const char* fileName) {
 	ntHeaders(newFile)->OptionalHeader.SizeOfImage =
 		sectionHeaderArrays(newFile)[ntHeaders(newFile)->FileHeader.NumberOfSections - 1].VirtualAddress +
 		sectionHeaderArrays(newFile)[ntHeaders(newFile)->FileHeader.NumberOfSections - 1].Misc.VirtualSize;
 
 	ntHeaders(newFile)->OptionalHeader.DllCharacteristics &= ~(IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE);
 	FILE* fileHandler = fopen(fileName, "wb");
-	fwrite(newFile, 1, lengthOfFile, fileHandler);
-	fclose(fileHandler);
+	if (fileHandler) {
+		fwrite(newFile, 1, lengthOfFile, fileHandler);
+		fclose(fileHandler);
+		return true;
+	}
+	else {
+		std::cout << "[!] Error on writing new content" << std::endl;
+		return false;
+	}
+	
 }
 
 char * createNewSectionHeader(char* imageBase, unsigned char* packedContent, size_t packedLength, size_t* newFileSize){
@@ -68,21 +76,17 @@ char * createNewSectionHeader(char* imageBase, unsigned char* packedContent, siz
 			paddedLength = packedLength;
 		}
 		encryptData(newBuffer, paddedLength, keyBuffer, IVBuffer);
-		std::cout << "Data Buffer Encrypted ! " << std::endl;
-		printf("Key: ");
+		std::cout << "[+] Given exe is encrypted!" << std::endl;
+		printf("[+] Symmetric Key: ");
 		for (int i = 0; i < KEYSIZE; i++) {
-			printf(" 0x%x", keyBuffer[i]);
+			printf(" 0x%02x", keyBuffer[i]);
 		}
 		printf("\n");
-		printf("IV: ");
+		printf("[+] IV Key: ");
 		for (int i = 0; i < 16; i++) {
-			printf(" 0x%x", IVBuffer[i]);
+			printf(" 0x%02x", IVBuffer[i]);
 		}
 		printf("\n");
-		printf("Original Length: %d\n", packedLength);
-		printf("Encrypted Length: %d\n", paddedLength);
-		//decryptData(newBuffer, dataLength, keyBuffer, IVBuffer);
-		//printf("%17s\n", newBuffer);
 		//We are safe
 		memcpy(newSectionHeader->Name, ".huan", IMAGE_SIZEOF_SHORT_NAME);
 		//KEY + IV + Encrypted Content + int size for original length + int size for encrypted length

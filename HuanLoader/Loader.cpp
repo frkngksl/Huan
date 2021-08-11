@@ -191,6 +191,7 @@ FirstThunk is another important member which point to IAT. in the previous step 
 	}
 }
 
+
 void fixRelocTable(BYTE* loadedAddr, BYTE* preferableAddr, IMAGE_DATA_DIRECTORY* relocDir) {
 	//for each block
 	//The relocation table contains many packages to relocate the information related to the virtual address inside the virtual memory
@@ -218,6 +219,7 @@ void fixRelocTable(BYTE* loadedAddr, BYTE* preferableAddr, IMAGE_DATA_DIRECTORY*
 		}
 		size_t entriesNum = (relocBlockMetadata->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(BASE_RELOCATION_ENTRY);
 		size_t pageStart = relocBlockMetadata->VirtualAddress;
+		//printf("Entries Num: %d %d\n", entriesNum, pageStart);
 		BASE_RELOCATION_ENTRY* relocEntryCursor = (BASE_RELOCATION_ENTRY*)((BYTE*)relocBlockMetadata + sizeof(IMAGE_BASE_RELOCATION));
 		for (int i = 0; i < entriesNum; i++) {
 			if (relocEntryCursor->Type == 0) {
@@ -239,9 +241,12 @@ void peLoader(unsigned char* baseAddr) {
 	IMAGE_DATA_DIRECTORY* relocTable = getRelocTable(ntHeader);
 	ULONGLONG preferableAddress = ntHeader->OptionalHeader.ImageBase;
 	HMODULE ntdllHandler = LoadLibraryA("ntdll.dll");
+	std::cout << "Test" << std::endl;
 	//Unmap the preferable address
 	((int(WINAPI*)(HANDLE, PVOID))GetProcAddress(ntdllHandler, "NtUnmapViewOfSection"))((HANDLE)-1, (LPVOID)ntHeader->OptionalHeader.ImageBase);
+	std::cout << "Test2" << std::endl;
 	BYTE *imageBaseForPE = (BYTE*)VirtualAlloc((LPVOID) preferableAddress, ntHeader->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	std::cout << "Test3" << std::endl;
 	if (!imageBaseForPE && !relocTable){
 		std::cout << "[!] No Relocation Table and Cannot load to the preferable address" << std::endl;
 		return;
@@ -296,19 +301,13 @@ int main() {
 	PIMAGE_SECTION_HEADER sectionHeadersCursor = (PIMAGE_SECTION_HEADER)(((PBYTE)imageNTHeaders) + sizeof(IMAGE_NT_HEADERS));
 	BYTE buf[10];
 	for (unsigned int i = 1; i <= imageNTHeaders->FileHeader.NumberOfSections; i++) {
-		//std::cout << sectionHeadersCursor->Name << std::endl;
 		if (strncmp((const char*)sectionHeadersCursor->Name, ".huan", 5) == 0) {
-			std::cout << "Bulundu" << std::endl;
 			break;
 		}
 		sectionHeadersCursor = (PIMAGE_SECTION_HEADER)((PBYTE)sectionHeadersCursor + 0x28);
 	}
 	
-	BYTE* binaryContent = (BYTE *) readBinary("C:\\Users\\picus\\source\\repos\\DummyFile\\x64\\Release\\DummyFile.exe",&fileSizeForDebug);
-	peLoader(binaryContent);
-	/*
 	char* sectionValuePtr = imageBaseAddress + sectionHeadersCursor->VirtualAddress;
-	printf("%p\n", sectionValuePtr);
 	//New Section contains 4 byte original length + 4 byte encrypted length + 16 byte Key + 16 byte IV + encrypted data
 	originalDataLength = (int *) sectionValuePtr;
 	encryptedDataLength = (int*)(sectionValuePtr + 4);
@@ -319,14 +318,9 @@ int main() {
 	memcpy(encryptedContent, sectionValuePtr + 40, *encryptedDataLength);
 	decryptData(encryptedContent, *encryptedDataLength, encryptKey, IVKey);
 	memcpy(originalContent, encryptedContent, *originalDataLength);
-
-	printf("Original Content: ");
-	free(encryptedContent);
-	for (int i = 0; i < *originalDataLength; i++) {
-		printf(" %c", originalContent[i]);
-	}
-	printf("\n");
+	std::cout << "[+] Data is decrypted! " << std::endl;
+	peLoader(originalContent);
 	//Size of raw image shows the required address space (Last section Virtual Address + Last section virtual size
-	*/
+
 	return 0;
 }
