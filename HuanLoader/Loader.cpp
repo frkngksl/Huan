@@ -241,12 +241,9 @@ void peLoader(unsigned char* baseAddr) {
 	IMAGE_DATA_DIRECTORY* relocTable = getRelocTable(ntHeader);
 	ULONGLONG preferableAddress = ntHeader->OptionalHeader.ImageBase;
 	HMODULE ntdllHandler = LoadLibraryA("ntdll.dll");
-	std::cout << "Test" << std::endl;
 	//Unmap the preferable address
 	((int(WINAPI*)(HANDLE, PVOID))GetProcAddress(ntdllHandler, "NtUnmapViewOfSection"))((HANDLE)-1, (LPVOID)ntHeader->OptionalHeader.ImageBase);
-	std::cout << "Test2" << std::endl;
 	BYTE *imageBaseForPE = (BYTE*)VirtualAlloc((LPVOID) preferableAddress, ntHeader->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-	std::cout << "Test3" << std::endl;
 	if (!imageBaseForPE && !relocTable){
 		std::cout << "[!] No Relocation Table and Cannot load to the preferable address" << std::endl;
 		return;

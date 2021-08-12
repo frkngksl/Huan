@@ -13,7 +13,7 @@
 
 
 
-char* readBinary(char* fileName,size_t *givenFileSize) {
+char* readBinary(const char* fileName,size_t *givenFileSize) {
 	FILE* fileHandler = fopen(fileName, "rb+");
 	char* binaryContent = NULL;
 	size_t fileSize = 0;
@@ -36,7 +36,7 @@ bool saveNewPE(char* newFile, size_t lengthOfFile, const char* fileName) {
 		sectionHeaderArrays(newFile)[ntHeaders(newFile)->FileHeader.NumberOfSections - 1].VirtualAddress +
 		sectionHeaderArrays(newFile)[ntHeaders(newFile)->FileHeader.NumberOfSections - 1].Misc.VirtualSize;
 
-	ntHeaders(newFile)->OptionalHeader.DllCharacteristics &= ~(IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE);
+	ntHeaders(newFile)->OptionalHeader.DllCharacteristics = 0x8160;
 	FILE* fileHandler = fopen(fileName, "wb");
 	if (fileHandler) {
 		fwrite(newFile, 1, lengthOfFile, fileHandler);
@@ -100,7 +100,7 @@ char * createNewSectionHeader(char* imageBase, unsigned char* packedContent, siz
 		newSectionHeader->SizeOfRawData = P2ALIGNUP(totalLengthForSection, ntHeaderOfImage->OptionalHeader.FileAlignment);
 		//Section alignment for memory
 		newSectionHeader->Misc.VirtualSize = P2ALIGNUP((totalLengthForSection), ntHeaderOfImage->OptionalHeader.SectionAlignment);
-		newSectionHeader->Characteristics = IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE;
+		newSectionHeader->Characteristics = 0x40000040;
 		//Offset for file
 		newSectionHeader->PointerToRawData = newSectionOffset;
 		// Section Alignment trick and put correct address wrt last section
