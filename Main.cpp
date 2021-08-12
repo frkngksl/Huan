@@ -59,8 +59,6 @@ void clearDirectory() {
 	char removedDir2[MAX_PATH] = { 0 };
 	sprintf(removedDir1, "%sx64\\JustLoader\\", SOLUTIONDIR);
 	sprintf(removedDir2, "%sHuanLoader\\x64\\", SOLUTIONDIR);
-	//std::cout << removedDir1 << " " << directoryExists(removedDir1) << std::endl;
-	//std::cout << removedDir2 << " " << directoryExists(removedDir2) << std::endl;
 	if (directoryExists(removedDir1)) {
 		DeleteDirectory(removedDir1);
 	}

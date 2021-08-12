@@ -118,10 +118,7 @@ char * createNewSectionHeader(char* imageBase, unsigned char* packedContent, siz
 		memcpy(newExeBuffer + newSectionOffset + 8 + 16 + 16, newBuffer, paddedLength);
 		*originalLength = packedLength;
 		*encryptedLength = paddedLength;
-		//memset(newExeBuffer + newSectionOffset, 0x01, 1);
-		//memset(newExeBuffer + newSectionOffset+1, 0x00, stubSize - 1);
 		*newFileSize += newSectionOffset;
-		//std::cout << newSectionHeader->VirtualAddress << std::endl;
 		return newExeBuffer;
 	}
 	else {
