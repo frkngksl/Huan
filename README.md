@@ -28,3 +28,6 @@ When the loader is executed, it first takes the image base of itself by reading 
 - http://research32.blogspot.com/2015/01/base-relocation-table.html
 - https://blog.kowalczyk.info/articles/pefileformat.html
 - http://sandsprite.com/CodeStuff/Understanding_imports.html
+
+# Disclaimer
+I shared this tool only for showing the code snippets of well known TTPs. I'm not responsible for the use of this tool for malicious activities.
