@@ -28,6 +28,6 @@ When the loader is executed, it first takes the image base of itself by reading 
 - https://blog.kowalczyk.info/articles/pefileformat.html
 - http://sandsprite.com/CodeStuff/Understanding_imports.html
 
-## Disclaimer
+# Disclaimer
 
 For authorized security testing only. Misuse of this tool against systems without explicit permission is illegal.
